@@ -1,0 +1,5 @@
+certs/
+*.cer
+*.crt
+*.p12
+*.key
