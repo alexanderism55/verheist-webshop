@@ -15,7 +15,27 @@ const https = require("https");
 
 const app = express();
 
-app.use(cors());
+// CORS: allow GitHub Pages + localhost for dev
+const allowedOrigins = [
+  "https://alexanderism55.github.io", // GitHub Pages origin
+  "http://localhost:3000"             // optional local dev origin
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (curl, Postman, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg =
+          "The CORS policy for this site does not allow access from the specified Origin.";
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    }
+  })
+);
+
 app.use(express.json());
 
 // --------------------------------------------------
@@ -46,7 +66,7 @@ console.log("[BOOT] clientKey decode:", clientKey.length > 0 ? "Success" : "Fail
 const sapAgent = new https.Agent({
   cert: clientCert,
   key: clientKey,
-  rejectUnauthorized: true,
+  rejectUnauthorized: true
 });
 
 console.log("[BOOT] HTTPS SAP agent:", sapAgent ? "Success" : "Fail");
@@ -94,7 +114,7 @@ async function sapFetch(url, options = {}) {
 
   const resp = await fetch(url, {
     ...options,
-    agent: sapAgent,
+    agent: sapAgent
   });
 
   console.log("[SAP] Response status:", resp.status, resp.statusText);
@@ -110,8 +130,8 @@ async function fetchCsrfToken() {
     method: "GET",
     headers: {
       "X-CSRF-Token": "Fetch",
-      "Accept": "application/json",
-    },
+      Accept: "application/json"
+    }
   });
 
   const csrf = resp.headers.get("x-csrf-token");
@@ -144,14 +164,16 @@ async function fetchCsrfAndEtagForOrder(salesOrder) {
     method: "GET",
     headers: {
       "X-CSRF-Token": "Fetch",
-      "Accept": "application/json",
-    },
+      Accept: "application/json"
+    }
   });
 
   if (!resp.ok) {
     const text = await resp.text();
     console.log("[ETAG] Failed response body:", preview(text));
-    throw new Error(`Failed to fetch order for ETag: ${resp.status} ${resp.statusText}`);
+    throw new Error(
+      `Failed to fetch order for ETag: ${resp.status} ${resp.statusText}`
+    );
   }
 
   const csrf = resp.headers.get("x-csrf-token");
@@ -204,7 +226,7 @@ function buildItemsPayload(cartItems) {
     SalesOrderItem: String(ci.itemNo),
     Material: String(ci.material),
     RequestedQuantity: String(ci.quantity),
-    RequestedQuantityUnit: "PC",
+    RequestedQuantityUnit: "PC"
   }));
 }
 
@@ -224,7 +246,7 @@ app.get("/api/health", (req, res) => {
     service: "sap-sales-order-proxy",
     certLoaded: !!clientCertB64,
     keyLoaded: !!clientKeyB64,
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -242,9 +264,18 @@ app.post("/api/createSalesOrder", async (req, res) => {
       return res.status(400).send(validationError);
     }
 
-    console.log("[CREATE] customerRef:", customerRef ? "Success" : "Default Used");
-    console.log("[CREATE] withDeliveryBlock:", typeof withDeliveryBlock === "boolean" ? "Success" : "Default Used");
-    console.log("[CREATE] cart item count:", cartItems.length > 0 ? "Success" : "Fail");
+    console.log(
+      "[CREATE] customerRef:",
+      customerRef ? "Success" : "Default Used"
+    );
+    console.log(
+      "[CREATE] withDeliveryBlock:",
+      typeof withDeliveryBlock === "boolean" ? "Success" : "Default Used"
+    );
+    console.log(
+      "[CREATE] cart item count:",
+      cartItems.length > 0 ? "Success" : "Fail"
+    );
 
     const { csrf, cookies } = await fetchCsrfToken();
 
@@ -268,7 +299,7 @@ app.post("/api/createSalesOrder", async (req, res) => {
       TransactionCurrency: "EUR",
       CustomerPaymentTerms: "0004",
       DeliveryBlockReason: deliveryBlockReason,
-      to_Item: itemsPayload,
+      to_Item: itemsPayload
     };
 
     console.log("[CREATE] Payload build:", body ? "Success" : "Fail");
@@ -279,16 +310,22 @@ app.post("/api/createSalesOrder", async (req, res) => {
       Accept: "application/json",
       "Content-Type": "application/json",
       "X-CSRF-Token": csrf,
-      Cookie: cookies.join("; "),
+      Cookie: cookies.join("; ")
     };
 
-    console.log("[CREATE] POST preparation:", headersToSend ? "Success" : "Fail");
-    console.log("[CREATE] Cookies ready:", cookies.length > 0 ? "Success" : "Fail");
+    console.log(
+      "[CREATE] POST preparation:",
+      headersToSend ? "Success" : "Fail"
+    );
+    console.log(
+      "[CREATE] Cookies ready:",
+      cookies.length > 0 ? "Success" : "Fail"
+    );
 
     const resp = await sapFetch(url, {
       method: "POST",
       headers: headersToSend,
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
 
     const text = await resp.text();
@@ -314,7 +351,7 @@ app.post("/api/createSalesOrder", async (req, res) => {
 
     return res.json({
       salesOrder: so,
-      message: "Sales order created successfully",
+      message: "Sales order created successfully"
     });
   } catch (e) {
     console.log("[CREATE] Unexpected error:", e.message);
@@ -340,7 +377,7 @@ app.patch("/api/updateDeliveryBlock", async (req, res) => {
     const { csrf, cookies, etag } = await fetchCsrfAndEtagForOrder(salesOrder);
 
     const body = {
-      DeliveryBlockReason: "",
+      DeliveryBlockReason: ""
     };
 
     const url = `${BASE_URL}/A_SalesOrder('${salesOrder}')`;
@@ -350,17 +387,20 @@ app.patch("/api/updateDeliveryBlock", async (req, res) => {
       "Content-Type": "application/json",
       "X-CSRF-Token": csrf,
       "If-Match": etag || "*",
-      Cookie: cookies.join("; "),
+      Cookie: cookies.join("; ")
     };
 
     console.log("[PATCH] If-Match ready:", etag ? "Success" : "Fail");
-    console.log("[PATCH] Cookies ready:", cookies.length > 0 ? "Success" : "Fail");
+    console.log(
+      "[PATCH] Cookies ready:",
+      cookies.length > 0 ? "Success" : "Fail"
+    );
     console.log("[PATCH] PATCH payload:", body ? "Success" : "Fail");
 
     const resp = await sapFetch(url, {
       method: "PATCH",
       headers: headersToSend,
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
 
     const text = await resp.text();
@@ -376,7 +416,7 @@ app.patch("/api/updateDeliveryBlock", async (req, res) => {
     return res.json({
       ok: true,
       salesOrder,
-      message: "Delivery block removed successfully",
+      message: "Delivery block removed successfully"
     });
   } catch (e) {
     console.log("[PATCH] Unexpected error:", e.message);

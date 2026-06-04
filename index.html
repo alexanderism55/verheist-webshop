@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="nl">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -667,7 +666,6 @@
     }
   </style>
 </head>
-
 <body>
   <div class="topbar">
     <div class="container topbar-inner">
@@ -688,7 +686,7 @@
 
       <div class="nav-actions">
         <input id="searchInput" class="search" type="text"
-          placeholder="Zoek op cement, isolatie, tegel, gereedschap..." />
+               placeholder="Zoek op cement, isolatie, tegel, gereedschap..." />
         <button class="btn btn-secondary" onclick="scrollToProducts()">Producten</button>
         <button id="cartBtn" class="btn btn-primary">Offertekar (0)</button>
       </div>
@@ -710,11 +708,9 @@
             <button class="btn btn-secondary" onclick="openCart()">Open offertekar</button>
           </div>
           <div class="hero-points">
-            <div class="hero-point"><strong>Correcte voorraad</strong><br><span>Direct zichtbaar per product</span>
-            </div>
+            <div class="hero-point"><strong>Correcte voorraad</strong><br><span>Direct zichtbaar per product</span></div>
             <div class="hero-point"><strong>Expertenadvies</strong><br><span>Voor ruwbouw en afwerking</span></div>
-            <div class="hero-point"><strong>Levering of afhaling</strong><br><span>Voor professionals en
-                particulieren</span></div>
+            <div class="hero-point"><strong>Levering of afhaling</strong><br><span>Voor professionals en particulieren</span></div>
           </div>
         </div>
 
@@ -902,7 +898,7 @@
     let selectedCategory = 'Alle';
     let searchTerm = '';
     let cart = [];
-    let lastCreatedSalesOrder = null;  // Add this at the top with other state variables
+    let lastCreatedSalesOrder = null;
 
     // Dumb payment outcome toggle (true = success, false = failure)
     let paymentSuccessToggle = true;
@@ -937,6 +933,8 @@
     const resultSubtitle = document.getElementById('resultSubtitle');
     const resultEmoji = document.getElementById('resultEmoji');
     const resultMessage = document.getElementById('resultMessage');
+
+    const BACKEND_BASE = "https://alexanderism55-github-io-verheist.onrender.com";
 
     function euro(v) {
       return '€' + v.toFixed(2);
@@ -1149,10 +1147,11 @@
         // Success -> reset state for next cart
         hasCreatedOrderForThisCart = false;
         lastBlockedSalesOrderId = null;
-        lastCreatedSalesOrder = null;  // ← Clear the stored order number
+        lastCreatedSalesOrder = null;
         resetPaymentForm();
       }
     }
+
     async function completePayment() {
       const name = document.getElementById('customerName').value.trim();
       const email = document.getElementById('customerEmail').value.trim();
@@ -1183,7 +1182,7 @@
         if (!hasCreatedOrderForThisCart) {
           const withDeliveryBlock = !thisPaymentSucceeded;
 
-          const resp = await fetch("http://localhost:3000/api/createSalesOrder", {
+          const resp = await fetch(`${BACKEND_BASE}/api/createSalesOrder`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1205,7 +1204,7 @@
           const so = data.salesOrder;
           console.log("Created SalesOrder:", so);
 
-          lastCreatedSalesOrder = so;  // ← Store the sales order number
+          lastCreatedSalesOrder = so;
           hasCreatedOrderForThisCart = true;
 
           if (!thisPaymentSucceeded) {
@@ -1213,7 +1212,7 @@
           }
         } else {
           if (thisPaymentSucceeded && lastBlockedSalesOrderId) {
-            const resp = await fetch("http://localhost:3000/api/updateDeliveryBlock", {
+            const resp = await fetch(`${BACKEND_BASE}/api/updateDeliveryBlock`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -1246,6 +1245,7 @@
         showResult(false);
       }
     }
+
     function showToast(message) {
       toast.textContent = message;
       toast.classList.add('show');
@@ -1281,6 +1281,7 @@
       document.getElementById('cardCvc').value = '';
       document.getElementById('deliveryMode').selectedIndex = 0;
     }
+
     renderFilters();
     renderProducts();
     renderPaymentMethods();
@@ -1288,5 +1289,4 @@
     cartBtn.addEventListener('click', openCart);
   </script>
 </body>
-
 </html>
